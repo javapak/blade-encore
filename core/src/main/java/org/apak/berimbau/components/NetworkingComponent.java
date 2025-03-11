@@ -32,7 +32,7 @@ public class NetworkingComponent {
     
     public void applyNetworkData(CharacterController character, NetworkPacket packet) {
         character.getMovement().setPosition(packet.getVector3("position"));
-        character.getStateMachine().setState(packet.getString("state"));
+        character.getStateMachine().setState(packet.getStateMachine("state"));
         character.getStateMachine().setAttackStance(AttackStance.valueOf(packet.getString("attackStance")));
         character.getStateMachine().isShuffling(packet.getBoolean("isShuffling"));
         character.getStateMachine().isAttacking(packet.getBoolean("isAttacking"));

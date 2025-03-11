@@ -1,6 +1,10 @@
 package org.apak.berimbau.components;
 
-public class StateMachine {
+import java.io.IOException;
+
+import com.badlogic.gdx.utils.Json.Serializable;
+
+public class StateMachine<T extends Enum<T>> implements Serializable {
     private AttackStance attackStance = AttackStance.BALANCED; // Default stance
     private boolean isAirborne = false;
     private boolean isWalking = false;
@@ -26,7 +30,13 @@ public class StateMachine {
 
     }
 
+     private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+        out.defaultWriteObject();
+    }
 
+    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();       
+    }
 
     public void setAttackStance(AttackStance stance) {
         if (this.attackStance != stance) {
