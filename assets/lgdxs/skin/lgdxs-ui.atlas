@@ -267,3 +267,16 @@ title-font-export
   orig: 253, 253
   offset: 0, 0
   index: -1
+textfield-bg
+  rotate: false
+  xy: 100, 100
+  size: 200, 50
+  split: 5, 5, 5, 5
+textfield-cursor
+  rotate: false
+  xy: 50, 50
+  size: 2, 20
+textfield-selection
+  rotate: false
+  xy: 60, 50
+  size: 200, 50

@@ -3,6 +3,8 @@ package org.apak.berimbau.controllers;
 import org.apak.berimbau.components.*;
 import org.apak.berimbau.network.NetworkPacket;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Vector3;
 
 public class CharacterController {
@@ -10,6 +12,7 @@ public class CharacterController {
     private MovementComponent movement;
     private CombatComponent combat;
     private StateMachine state;
+    private final ChatComponent chatComponent; // Nullabe (only for networked players)
     private NetworkingComponent network; // Nullable (only for networked players)
 
     // Constructor for Local Players (No Networking)
@@ -18,6 +21,7 @@ public class CharacterController {
         this.movement = new MovementComponent();
         this.combat = new CombatComponent();
         this.state = new StateMachine();
+        this.chatComponent = null; // No chat component needed
         this.network = null; // No networking needed
     }
 
@@ -28,6 +32,7 @@ public class CharacterController {
         this.state = new StateMachine();
         this.network = new NetworkingComponent(playerID, serverIP, serverPort);
         this.input = new NetworkInputHandler(playerID, this.network.getNetworkManager());
+        this.chatComponent = new ChatComponent(this.network.getNetworkManager(), playerID);
 
     }
 
@@ -68,6 +73,12 @@ public class CharacterController {
         if (network != null) {
             network.sync(this);
         }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Y)) {
+            chatComponent.toggleChat();
+        }
+
+        chatComponent.render();
     }
     
 
@@ -78,6 +89,10 @@ public class CharacterController {
             case HEAVY -> state.setAttackStance(AttackStance.FAST);
             case AIR -> state.setAttackStance(AttackStance.BALANCED);
         }
+    }
+
+    public void dispose() {
+        chatComponent.dispose();
     }
 
     public void handleNetworkData(NetworkPacket packet) {

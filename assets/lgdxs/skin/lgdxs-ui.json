@@ -1555,6 +1555,17 @@ com.badlogic.gdx.scenes.scene2d.ui.ProgressBar$ProgressBarStyle: {
 		knobBefore: progress-bar-vertical
 	}
 }
+com.badlogic.gdx.scenes.scene2d.ui.TextField$TextFieldStyle: {
+	default: {
+		font: font
+		fontColor: white
+		disabledFontColor: clear
+		background: textfield-bg
+		selection: textfield-selection
+		cursor: textfield-cursor
+	}
+}
+		
 com.badlogic.gdx.scenes.scene2d.ui.TextButton$TextButtonStyle: {
 	default: {
 		font: sub-title

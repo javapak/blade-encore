@@ -1,7 +1,6 @@
 package org.apak.berimbau.components;
 
 public class StateMachine {
-    private String currentState = "IDLE";
     private AttackStance attackStance = AttackStance.BALANCED; // Default stance
     private boolean isAirborne = false;
     private boolean isWalking = false;
@@ -13,12 +12,21 @@ public class StateMachine {
 
 
 
-    public void setState(String newState) {
-        if (!currentState.equals(newState)) {
-            System.out.println("State changed to: " + newState);
-            currentState = newState;
+    public void setState(StateMachine newStates) {
+        if (!this.equals(newStates)) {
+            System.out.println("State changed to: " + newStates);
+            this.attackStance = newStates.getAttackStance();
+            this.isAirborne = newStates.isAirborne();
+            this.isWalking = newStates.isWalking();
+            this.isShuffling = newStates.isShuffling();
+            this.isAttacking = newStates.isAttacking();
+            this.isBlocking = newStates.isBlocking();
+            this.isStanceSwitching = newStates.isStanceSwitching();             
         }
+
     }
+
+
 
     public void setAttackStance(AttackStance stance) {
         if (this.attackStance != stance) {
@@ -27,8 +35,8 @@ public class StateMachine {
         }
     }
 
-    public String getCurrentState() {
-        return currentState;
+    public StateMachine getCurrentState() {
+        return this;
     }
 
     public AttackStance getAttackStance() {
@@ -79,7 +87,7 @@ public class StateMachine {
     public boolean isStanceSwitching() {
         return isStanceSwitching;
     }
-    
+
     public void isStanceSwitching(boolean isStanceSwitching) {
         if (isStanceSwitching) {
             this.isStanceSwitching = true;

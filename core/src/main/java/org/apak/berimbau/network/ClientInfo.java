@@ -13,11 +13,11 @@ public class ClientInfo {
     public StateMachine state;
     public AttackStance attackStance;
 
-    public ClientInfo(InetAddress address, int port, Vector3 position, StateMachine state, AttackStance attackStance) {
+    public ClientInfo(InetAddress address, int port, Vector3 position, StateMachine newStates, AttackStance attackStance) {
         this.address = address;
         this.port = port;
         this.position = position;
-        this.state = state;
+        this.state = newStates;
         this.attackStance = attackStance;
     }
 }

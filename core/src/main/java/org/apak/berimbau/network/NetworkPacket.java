@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apak.berimbau.components.AttackStance;
+import org.apak.berimbau.components.StateMachine;
 
 import com.badlogic.gdx.math.Vector3;
 import java.io.Serializable;
@@ -49,5 +50,9 @@ public class NetworkPacket implements Serializable {
     public Map<String, Object> getData() {
         return data;
     }
+
+	public StateMachine getStateMachine(String key) {
+	return (StateMachine) data.getOrDefault(key, "");
+	}
 }
 

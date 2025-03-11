@@ -5,15 +5,18 @@ import org.apak.berimbau.network.NetworkManager;
 import org.apak.berimbau.network.NetworkPacket;
 import com.badlogic.gdx.math.Vector3;
 import org.apak.berimbau.components.AttackStance;
+import org.apak.berimbau.components.StateMachine;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerNetworkManager extends NetworkManager {
@@ -95,6 +98,16 @@ public void processPacket(NetworkPacket packet) {
         return;
     }
 
+    if (packet.getData().containsKey("chatMessage")) {
+        String chatMessage = packet.getData().getOrDefault("chatMessage", "").toString();
+        System.out.println("📨 Chat from Player " + playerID + ": " + chatMessage);
+
+        // Broadcast the message to all players
+        NetworkPacket chatBroadcast = new NetworkPacket(playerID);
+        chatBroadcast.put("chatMessage", chatMessage);
+        broadcastChatToAllPlayers(chatBroadcast, playerID);
+    }
+
     // Update the player's state on the server
     updatePlayerState(playerID, moveDirection, isWalking, isShuffling, isAttacking, isBlocking, isAirborne, isStanceSwitching);
 }
@@ -102,6 +115,27 @@ public void processPacket(NetworkPacket packet) {
 private boolean isValidMove(int playerID, Vector3 moveDirection) {
     // Implement movement validation logic
     return true;
+}
+
+public void broadcastChatToAllPlayers(NetworkPacket packet, int senderID) {
+    for (Entry<Integer, ClientInfo> entry : players.entrySet()) {
+        int playerID = entry.getKey();
+        ClientInfo clientInfo = entry.getValue();
+        InetAddress address = clientInfo.address;
+        int port = clientInfo.port;
+
+        // Don't send the message back to the sender
+        if (playerID == senderID) continue;
+
+        try {
+            byte[] data = serialize(packet);
+            DatagramPacket udpPacket = new DatagramPacket(data, data.length, address, port);
+            socket.send(udpPacket);
+            System.out.println("💬 Sent chat message from Player " + senderID + " to Player " + playerID);
+        } catch (IOException e) {
+            System.err.println("❌ Failed to send chat message to player " + playerID + ": " + e.getMessage());
+        }
+    }
 }
 
 private void updatePlayerState(int playerID, Vector3 moveDirection, boolean isWalking, boolean isShuffling, boolean isAttacking, boolean isBlocking, boolean isAirborne, boolean isStanceSwitching) {
@@ -152,7 +186,7 @@ private void broadcastPlayerUpdate(int senderID) {
 
             int playerID = receivedPacket.getPlayerID();
             Vector3 newPosition = receivedPacket.getVector3("position");
-            String newState = receivedPacket.getString("state");
+            StateMachine newState = receivedPacket.getStateMachine("state");
             AttackStance newStance = receivedPacket.getAttackStance("attackStance");
             Boolean isAttacking = receivedPacket.getBoolean("isAttacking");
             Boolean isBlocking = receivedPacket.getBoolean("isBlocking");
