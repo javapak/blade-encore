@@ -2,7 +2,7 @@ package org.apak.berimbau.components;
 
 import java.io.IOException;
 
-import com.badlogic.gdx.utils.Json.Serializable;
+import java.io.Serializable;
 
 public class StateMachine<T extends Enum<T>> implements Serializable {
     private AttackStance attackStance = AttackStance.BALANCED; // Default stance
