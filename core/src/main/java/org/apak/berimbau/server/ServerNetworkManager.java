@@ -74,13 +74,13 @@ public void processPacket(NetworkPacket packet) {
     int clientPort = packet.getSenderPort();
     String clientKey = clientAddress.getHostAddress() + ":" + clientPort; // ✅ Unique identifier
 
-    // ✅ Register new clients if not already tracked
+    //  Register new clients if not already tracked
     if (!players.containsKey(clientKey)) {
         players.put(clientKey, new ClientInfo(clientAddress, clientPort));
         System.out.println("✅ New client connected: " + clientKey);
     }
 
-    // ✅ Update the client's state
+    // Update the client's state
     ClientInfo client = players.get(clientKey);
     if (client == null) return;
 
