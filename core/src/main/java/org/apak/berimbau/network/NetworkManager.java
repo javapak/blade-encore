@@ -12,20 +12,8 @@ public class NetworkManager {
     private DatagramSocket socket;
     private InetAddress serverAddress;
     private int serverPort;
-    private InetAddress clientAddress;
 
     private final Queue<NetworkPacket> receivedPackets = new ConcurrentLinkedQueue<>();
-
-    protected NetworkManager(String serverIP, int port, String clientAddress) {
-        try {
-            socket = new DatagramSocket();
-            serverAddress = InetAddress.getByName(serverIP);
-            serverPort = port;
-            this.clientAddress = InetAddress.getByName(clientAddress);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     protected NetworkManager(String serverIP, int port) {
         try {
@@ -37,23 +25,23 @@ public class NetworkManager {
         }
     }
 
-    public static NetworkManager getInstance(String serverIP, int port, String clientAddress) {
+
+    public static NetworkManager getInstance(String serverIP, int port) {
         if (instance == null) {
-            instance = new NetworkManager(serverIP, port, clientAddress);
+            instance = new NetworkManager(serverIP, port);
         }
         return instance;
+    }
+    
+    public int getPort() {
+        return serverPort;
     }
 
     public static NetworkManager getInstance() {
         return instance;
     }
-
-    /**
-     * Send a network packet to the server.
-     */
     public void sendData(NetworkPacket packet) {
         try {
-            packet.setSender(clientAddress, serverPort);
             byte[] data = serialize(packet);
             DatagramPacket udpPacket = new DatagramPacket(data, data.length, serverAddress, serverPort);
             socket.send(udpPacket);

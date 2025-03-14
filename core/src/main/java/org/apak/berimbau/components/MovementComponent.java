@@ -46,4 +46,9 @@ public class MovementComponent {
         return position;
     
     }
+
+    public boolean isAirborne() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'isAirborne'");
+    }
 }

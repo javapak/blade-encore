@@ -72,7 +72,7 @@ public class CharacterController extends btMotionState {
         }
     }
     // Constructor for Networked Players
-    public CharacterController(int playerI, String serverIP, int serverPort) {
+    public CharacterController(int playerID, String serverIP, int serverPort) {
         setupPhysics();
         this.movement = new MovementComponent(rigidBody);
         this.setupModel();
