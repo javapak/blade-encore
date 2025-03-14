@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerNetworkManager extends NetworkManager {
     private DatagramSocket socket;
-    private final ConcurrentHashMap<Integer, ClientInfo> players = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ClientInfo> players = new ConcurrentHashMap<>();
 
     public ServerNetworkManager(String serverIP, int serverPort) {
         super(serverIP, serverPort);
@@ -44,9 +44,12 @@ public class ServerNetworkManager extends NetworkManager {
             while (true) {
                 try {
                     byte[] buffer = new byte[1024];
-                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                    socket.receive(packet); 
-
+                    DatagramPacket udpPacket = new DatagramPacket(buffer, buffer.length);
+                    socket.receive(udpPacket);
+    
+                    NetworkPacket packet = NetworkManager.deserialize(udpPacket.getData());
+                    packet.setSender(udpPacket.getAddress(), udpPacket.getPort()); // ✅ Store sender info
+    
                     processPacket(packet);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -66,51 +69,38 @@ public class ServerNetworkManager extends NetworkManager {
     return new byte[0];
 }
 
-private NetworkPacket deserialize(byte[] data) {
-    try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
-         ObjectInputStream ois = new ObjectInputStream(bis)) {
-        return (NetworkPacket) ois.readObject();
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
-    return null;
-}
-
 public void processPacket(NetworkPacket packet) {
-    int playerID = packet.getPlayerID();
-    Vector3 moveDirection = packet.getVector3("moveDirection");
-    boolean isWalking = packet.getBoolean("isWalking");
-    boolean isShuffling = packet.getBoolean("isShuffling");
-    boolean isAttacking = packet.getBoolean("isAttacking");
-    boolean isBlocking = packet.getBoolean("isBlocking");
-    boolean isAirborne = packet.getBoolean("isAirborne");
-    boolean isStanceSwitching = packet.getBoolean("isStanceSwitching");
+    InetAddress clientAddress = packet.getSenderAddress();
+    int clientPort = packet.getSenderPort();
+    String clientKey = clientAddress.getHostAddress() + ":" + clientPort; // ✅ Unique identifier
 
-    System.out.println("Received input from player " + playerID);
-    System.out.println("Move Direction: " + moveDirection);
-    System.out.println("Walking: " + isWalking + ", Shuffling: " + isShuffling);
-    System.out.println("Attacking: " + isAttacking + ", Blocking: " + isBlocking);
-    System.out.println("Airborne: " + isAirborne + ", StanceSwitching: " + isStanceSwitching);
-
-    // Apply validation logic (e.g., check if the player is allowed to move)
-    if (!isValidMove(playerID, moveDirection)) {
-        System.out.println("Invalid movement detected for player " + playerID);
-        return;
+    // ✅ Register new clients if not already tracked
+    if (!players.containsKey(clientKey)) {
+        players.put(clientKey, new ClientInfo(clientAddress, clientPort));
+        System.out.println("✅ New client connected: " + clientKey);
     }
 
-    if (packet.getData().containsKey("chatMessage")) {
-        String chatMessage = packet.getData().getOrDefault("chatMessage", "").toString();
-        System.out.println("📨 Chat from Player " + playerID + ": " + chatMessage);
+    // ✅ Update the client's state
+    ClientInfo client = players.get(clientKey);
+    if (client == null) return;
 
-        // Broadcast the message to all players
-        NetworkPacket chatBroadcast = new NetworkPacket(playerID);
-        chatBroadcast.put("chatMessage", chatMessage);
-        broadcastChatToAllPlayers(chatBroadcast, playerID);
-    }
+    client.position.set(packet.getVector3("position"));
+    client.moveDirection.set(packet.getVector3("moveDirection"));
+    client.isWalking = packet.getBoolean("isWalking");
+    client.isShuffling = packet.getBoolean("isShuffling");
+    client.isAttacking = packet.getBoolean("isAttacking");
+    client.isBlocking = packet.getBoolean("isBlocking");
+    client.isAirborne = packet.getBoolean("isAirborne");
+    client.isStanceSwitching = packet.getBoolean("isStanceSwitching");
 
-    // Update the player's state on the server
-    updatePlayerState(playerID, moveDirection, isWalking, isShuffling, isAttacking, isBlocking, isAirborne, isStanceSwitching);
+    // Log the update
+    System.out.println("📡 Updated player " + clientKey + " | Position: " + client.position);
+
+    // Broadcast this update to all clients
+    broadcastToAllPlayers(packet, clientKey);
 }
+
+
 
 private boolean isValidMove(int playerID, Vector3 moveDirection) {
     // Implement movement validation logic
@@ -118,22 +108,20 @@ private boolean isValidMove(int playerID, Vector3 moveDirection) {
 }
 
 public void broadcastChatToAllPlayers(NetworkPacket packet, int senderID) {
-    for (Entry<Integer, ClientInfo> entry : players.entrySet()) {
-        int playerID = entry.getKey();
+    for (Entry<String, ClientInfo> entry : players.entrySet()) {
+        String clientAddress = entry.getKey();
         ClientInfo clientInfo = entry.getValue();
         InetAddress address = clientInfo.address;
         int port = clientInfo.port;
 
         // Don't send the message back to the sender
-        if (playerID == senderID) continue;
+        if (packet.getSenderAddress().toString() == address.toString()) continue;
 
         try {
             byte[] data = serialize(packet);
             DatagramPacket udpPacket = new DatagramPacket(data, data.length, address, port);
             socket.send(udpPacket);
-            System.out.println("💬 Sent chat message from Player " + senderID + " to Player " + playerID);
         } catch (IOException e) {
-            System.err.println("❌ Failed to send chat message to player " + playerID + ": " + e.getMessage());
         }
     }
 }
@@ -150,6 +138,9 @@ private void broadcastPlayerUpdate(int senderID) {
             return;
         }
 
+
+        
+
         ClientInfo sender = players.get(senderID);
         if (sender == null) {
             System.err.println("ERROR: Sender ID " + senderID + " not found.");
@@ -158,62 +149,49 @@ private void broadcastPlayerUpdate(int senderID) {
 
         NetworkPacket packet = new NetworkPacket(senderID);
         packet.put("position", sender.position);
-        packet.put("state", sender.state);
-        packet.put("attackStance", sender.attackStance.name());
 
         byte[] data = serialize(packet);
 
-        for (Integer playerID : players.keySet()) {
-            ClientInfo receiver = players.get(playerID);
+        for (String entry : players.keySet()) {
+            ClientInfo receiver = players.get(entry);
             if (receiver == null || receiver.address == null || receiver.port <= 0) {
-                System.err.println("ERROR: Invalid client address/port for player " + playerID);
+                System.err.println("ERROR: Invalid client address/port for player " + entry);
                 continue;
             }
 
             DatagramPacket udpPacket = new DatagramPacket(data, data.length, receiver.address, receiver.port);
             socket.send(udpPacket);
-            System.out.println("Sent update to player " + playerID + " at " + receiver.address + ":" + receiver.port);
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+private void broadcastToAllPlayers(NetworkPacket packet, String senderKey) {
+    try {
+        if (this.socket == null) {
+            System.err.println("ERROR: DatagramSocket is null in broadcastToAllPlayers()");
+            return;
+        }
+
+        byte[] data = serialize(packet); 
+        for (String clientKey : players.keySet()) {
+            if (clientKey.equals(senderKey)) continue; 
+
+            ClientInfo receiver = players.get(clientKey);
+            if (receiver == null || receiver.address == null || receiver.port <= 0) {
+                System.err.println("ERROR: Invalid client address/port.");
+                continue;
+            }
+
+            DatagramPacket udpPacket = new DatagramPacket(data, data.length, receiver.address, receiver.port);
+            socket.send(udpPacket);
+            System.out.println("📡 Sent broadcast update to " + receiver.address + ":" + receiver.port);
         }
     } catch (Exception e) {
         e.printStackTrace();
     }
 }
 
-    public void processPacket(DatagramPacket packet) {
-        try {
-            NetworkPacket receivedPacket = deserialize(packet.getData());
-            if (receivedPacket == null) return;
-
-            int playerID = receivedPacket.getPlayerID();
-            Vector3 newPosition = receivedPacket.getVector3("position");
-            StateMachine newState = receivedPacket.getStateMachine("state");
-            AttackStance newStance = receivedPacket.getAttackStance("attackStance");
-            Boolean isAttacking = receivedPacket.getBoolean("isAttacking");
-            Boolean isBlocking = receivedPacket.getBoolean("isBlocking");
-            Boolean isAirborne = receivedPacket.getBoolean("isAirborne");
-            Boolean isStanceSwitching = receivedPacket.getBoolean("isStanceSwitching");
-            Boolean isWalking = receivedPacket.getBoolean("isWalking");
-            Boolean isShuffling = receivedPacket.getBoolean("isShuffling");
-            int clientPort = packet.getPort();
-            InetAddress clientAddress = packet.getAddress();
-
-            if (clientPort == 0) {
-                System.err.println("ERROR: Client port is 0! Unable to send packets back.");
-                return;
-            }
-
-            // Store player information, including address and port
-            players.put(playerID, new ClientInfo(clientAddress, clientPort, newPosition, newState, newStance));
-
-            // Debugging information
-            System.out.println("Stored client: " + clientAddress + ":" + clientPort + ", Client position: " + newPosition + ", State: " + newState + ", Stance: " + newStance + ", Attacking: " + isAttacking + ", Blocking: " + isBlocking + ", Airborne: " + isAirborne + ", StanceSwitching: " + isStanceSwitching + ", Walking: " + isWalking + ", Shuffling: " + isShuffling);
-
-            // Broadcast the updated state
-            broadcastPlayerUpdate(playerID);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     public void shutdown() {
         if (socket != null && !socket.isClosed()) {

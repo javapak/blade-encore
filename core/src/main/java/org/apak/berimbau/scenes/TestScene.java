@@ -1,109 +1,159 @@
 package org.apak.berimbau.scenes;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes;
-import com.badlogic.gdx.graphics.g3d.*;
+import com.badlogic.gdx.graphics.g3d.Environment;
+import com.badlogic.gdx.graphics.g3d.Material;
+import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
+import com.badlogic.gdx.graphics.g3d.Renderable;
+import com.badlogic.gdx.graphics.g3d.Shader;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader;
+import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
+import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.bullet.collision.btBroadphaseInterface;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionConfiguration;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionDispatcher;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionObject;
+import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
+import com.badlogic.gdx.physics.bullet.collision.btDbvtBroadphase;
+import com.badlogic.gdx.physics.bullet.dynamics.btConstraintSolver;
+import com.badlogic.gdx.physics.bullet.dynamics.btDiscreteDynamicsWorld;
+import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
+import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody.btRigidBodyConstructionInfo;
+import com.badlogic.gdx.physics.bullet.dynamics.btSequentialImpulseConstraintSolver;
+import com.badlogic.gdx.physics.bullet.collision.btDefaultCollisionConfiguration;
+import com.badlogic.gdx.physics.bullet.collision.btDispatcher;
+import com.badlogic.gdx.physics.bullet.collision.btStaticPlaneShape;
 
 import de.eskalon.commons.screen.ManagedScreen;
 import de.eskalon.commons.screen.ScreenManager;
+import de.eskalon.commons.screen.transition.ScreenTransition;
 
 import org.apak.berimbau.controllers.CharacterController;
-import org.apak.berimbau.components.*;
 
 public class TestScene extends ManagedScreen {
-    private final ScreenManager screenManager;
-    private PerspectiveCamera camera;
+    private btDiscreteDynamicsWorld dynamicsWorld;
+    private btRigidBody groundBody;
+    private CharacterController player;
     private ModelBatch modelBatch;
     private Environment environment;
-    private ModelInstance ground, character;
-    private CharacterController characterController;
+    private ModelInstance groundModel;
+    private btCollisionConfiguration collisionConfig;
+    private btDispatcher dispatcher;
+    private btBroadphaseInterface broadphase;
+    private btConstraintSolver solver;
+    private btCollisionShape groundShape;
 
-    public TestScene(ScreenManager screenManager) {
-        this.screenManager = screenManager;
-    }
+    public TestScene(ScreenManager<ManagedScreen, ScreenTransition> screenManager) {
+        setupPhysics();
+        setupGround();
+        player = new CharacterController(3, "10.0.0.61", 7777);
+        dynamicsWorld.addRigidBody(player.getRigidBody());
 
-    @Override
-    public void show() {
-        setupEnvironment();
-        setupCamera();
-        setupTestObjects();
-        setupCharacter();
-    }
-
-    private void setupEnvironment() {
         modelBatch = new ModelBatch();
         environment = new Environment();
-        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.5f, 0.5f, 0.5f, 1f));
-        environment.add(new DirectionalLight().set(Color.WHITE, -1f, -0.8f, -0.2f));
+        environment.set(new ColorAttribute(ColorAttribute.Diffuse, 0.8f, 0.8f, 0.8f, 1f)); // Make textures more visible
+        environment.add(new DirectionalLight().set(1f, 1f, 1f, -1f, -0.8f, -0.2f)); 
     }
 
-    private void setupCamera() {
-        camera = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        camera.position.set(0, 5, 10);
-        camera.lookAt(0, 1, 0);
-        camera.near = 0.1f;
-        camera.far = 300f;
-        camera.update();
+private void setupPhysics() {
+    collisionConfig = new btDefaultCollisionConfiguration();
+    dispatcher = new btCollisionDispatcher(collisionConfig);
+    broadphase = new btDbvtBroadphase();
+    solver = new btSequentialImpulseConstraintSolver();
+    
+    dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfig);
+    dynamicsWorld.setGravity(new Vector3(0, -9.81f, 0));
+
+
+    System.out.println("✅ Bullet Physics World Initialized!");
+}
+
+private void setupGround() {
+    // ✅ Create a visual model for the ground
+    System.out.println(Gdx.files.internal("blade-encore/assets/textures/512blue.png").exists());
+    Texture groundTexture = new Texture(Gdx.files.internal("blade-encore/assets/textures/512blue.png"));
+
+    Material groundMaterial = new Material(TextureAttribute.createDiffuse(groundTexture));
+
+    // ✅ Use ModelBuilder to manually scale UVs
+    ModelBuilder modelBuilder = new ModelBuilder();
+    modelBuilder.begin();
+    MeshPartBuilder meshBuilder = modelBuilder.part(
+        "ground", GL20.GL_TRIANGLES,
+        VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates,
+        groundMaterial
+    );
+
+    float size = 50f;  // ✅ Ground size
+    float uvScale = 10f;  // ✅ Repeat texture 10 times
+    meshBuilder.rect(
+        -size, 0f,  size,   // Top-left
+         size, 0f,  size,   // Top-right
+         size, 0f, -size,   // Bottom-right
+        -size, 0f, -size,   // Bottom-left
+        0f, 1f, 0f        
+    );
+
+
+    Model groundVisual = modelBuilder.end();
+    groundModel = new ModelInstance(groundVisual);
+    groundModel.transform.setToTranslation(0, -0.05f, 0); 
+
+    // ✅ Create a static physics body for the ground
+    btCollisionShape groundShape = new btStaticPlaneShape(new Vector3(0, 1, 0), 0);
+    btRigidBodyConstructionInfo groundInfo = new btRigidBodyConstructionInfo(0, null, groundShape);
+    groundBody = new btRigidBody(groundInfo);
+    groundBody.setCollisionFlags(btCollisionObject.CollisionFlags.CF_STATIC_OBJECT);
+    dynamicsWorld.addRigidBody(groundBody);
+
+    System.out.println("✅ Ground model created with repeated texture!");
+}
+@Override
+public void render(float delta) {
+    Gdx.gl.glClearColor(0, 0, 0, 1);
+    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+    dynamicsWorld.stepSimulation(delta, 5, 1f / 60f);
+    player.update(delta);
+    player.getCamera().update();
+
+    dynamicsWorld.stepSimulation(delta, 5);
+
+    modelBatch.begin(player.getCamera());
+    if (groundModel != null) {
+        modelBatch.render(groundModel, environment);
+    }
+    else {
+        System.err.println("ERROR: groundModel is NULL!");
     }
 
-    private void setupTestObjects() {
-        ModelBuilder modelBuilder = new ModelBuilder();
-        Model groundModel = modelBuilder.createBox(20f, 0.2f, 20f,
-                new Material(ColorAttribute.createDiffuse(Color.GRAY)),
-                VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-        ground = new ModelInstance(groundModel);
+    if (player.getModelInstance() != null) {
+        modelBatch.render(player.getModelInstance(), environment);
+    } else {
+        System.err.println("ERROR: player.getModelInstance() is NULL!");
     }
 
-    private void setupCharacter() {
-        // Create a placeholder box for the player character
-        ModelBuilder modelBuilder = new ModelBuilder();
-        Model characterModel = modelBuilder.createBox(1f, 2f, 1f,
-                new Material(ColorAttribute.createDiffuse(Color.RED)),
-                VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-        character = new ModelInstance(characterModel);
-
-        // Initialize character controller, random player id for now since only two (maybe a few more but whatever) players are going to be used.
-        characterController = new CharacterController((int)Math.floor(Math.random() * 100), "10.0.0.61" , 7777);
-    }
-
-    @Override
-    public void render(float delta) {
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-
-        handleCameraControls(delta);
-        characterController.update(delta);
-
-        modelBatch.begin(camera);
-        modelBatch.render(ground, environment);
-        modelBatch.render(character, environment);
-        modelBatch.end();
-    }
-
-    private void handleCameraControls(float delta) {
-        float moveSpeed = 10f * delta;
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) camera.position.add(camera.direction.cpy().scl(moveSpeed));
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) camera.position.sub(camera.direction.cpy().scl(moveSpeed));
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) camera.position.add(camera.direction.cpy().crs(Vector3.Y).scl(-moveSpeed));
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) camera.position.add(camera.direction.cpy().crs(Vector3.Y).scl(moveSpeed));
-        camera.update();
+    modelBatch.end();
+}    @Override
+    public void show() {
+        Gdx.input.setInputProcessor(null); // Reset input for the scene
     }
 
     @Override
     public void resize(int width, int height) {
-        camera.viewportWidth = width;
-        camera.viewportHeight = height;
-        camera.update();
+        player.getCamera().viewportWidth = width;
+        player.getCamera().viewportHeight = height;
+        player.getCamera().update();
     }
 
     @Override
@@ -114,8 +164,43 @@ public class TestScene extends ManagedScreen {
     @Override
     public void dispose() {
         modelBatch.dispose();
+        dynamicsWorld.dispose();
+        player.getRigidBody().dispose();
+        if (groundBody != null) {
+            dynamicsWorld.removeRigidBody(groundBody);
+            groundBody.dispose();
+            groundBody = null;
+        }
+    
+        if (groundShape != null) {
+            groundShape.dispose();
+            groundShape = null;
+        }
+    
+        if (dynamicsWorld != null) {
+            dynamicsWorld.dispose();
+            dynamicsWorld = null;
+        }
+    
+        if (solver != null) {
+            solver.dispose();
+            solver = null;
+        }
+    
+        if (broadphase != null) {
+            broadphase.dispose();
+            broadphase = null;
+        }
+    
+        if (dispatcher != null) {
+            dispatcher.dispose();
+            dispatcher = null;
+        }
+    
+        if (collisionConfig != null) {
+            collisionConfig.dispose();
+            collisionConfig = null;
+        }
+    
     }
-
-    @Override public void pause() {}
-    @Override public void resume() {}
 }

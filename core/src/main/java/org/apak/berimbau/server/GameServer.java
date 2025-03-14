@@ -8,6 +8,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URL;
+import org.apak.berimbau.network.NetworkManager;
+import org.apak.berimbau.network.NetworkPacket;
 
 
 public class GameServer {
@@ -38,11 +40,12 @@ public class GameServer {
                     byte[] buffer = new byte[1024];
                     DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                     socket.receive(packet);
-
                     // Assuming each packet received is from a client, print the client's address
                     System.out.println("Received packet from client: " + packet.getAddress().getHostAddress());
+                
+                    NetworkPacket deserializedPacket = NetworkManager.deserialize(packet.getData());
 
-                    networkManager.processPacket(packet); // Now correctly calls processPacket()
+                    networkManager.processPacket(deserializedPacket); // Now correctly calls processPacket()
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

@@ -30,14 +30,20 @@ public class NetworkInputHandler implements InputHandler {
         float x = (Gdx.input.isKeyPressed(Input.Keys.D) ? 1 : 0) - (Gdx.input.isKeyPressed(Input.Keys.A) ? 1 : 0);
         float z = (Gdx.input.isKeyPressed(Input.Keys.W) ? 1 : 0) - (Gdx.input.isKeyPressed(Input.Keys.S) ? 1 : 0);
         moveDirection.set(x, 0, z).nor();
+    
         isWalking = Gdx.input.isKeyPressed(Input.Keys.ALT_LEFT);
         isShuffling = detectShuffle();
         isAttacking = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
         isBlocking = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
         isAirborne = Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
         isStanceSwitching = Gdx.input.isKeyJustPressed(Input.Keys.Q);
-
-
+    
+        // ✅ NEW: Update position before sending
+        position.add(moveDirection.cpy().scl(Gdx.graphics.getDeltaTime() * 10)); // Simulate movement locally
+    
+        // ✅ NEW: Log movement updates
+        System.out.println("📡 Sending move update | Position: " + position + " | MoveDir: " + moveDirection);
+    
         // Package the input state and send to server
         NetworkPacket packet = new NetworkPacket(playerID);
         packet.put("position", position);
@@ -46,11 +52,11 @@ public class NetworkInputHandler implements InputHandler {
         packet.put("isShuffling", isShuffling);
         packet.put("isAttacking", isAttacking);
         packet.put("isBlocking", isBlocking);
-        packet.put("attackStance", AttackStance.FAST); 
+        packet.put("attackStance", AttackStance.FAST);
         packet.put("isAirborne", isAirborne);
         packet.put("isStanceSwitching", isStanceSwitching);
-
-        networkManager.sendData(packet); // Send to server for validation
+    
+        networkManager.sendData(packet); // n
     }
 
     /**

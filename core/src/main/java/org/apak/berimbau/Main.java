@@ -1,8 +1,9 @@
 package org.apak.berimbau;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
-
+import com.badlogic.gdx.physics.bullet.Bullet;
 import de.eskalon.commons.core.ManagedGame;
 import de.eskalon.commons.screen.ManagedScreen;
 import de.eskalon.commons.screen.transition.ScreenTransition;
@@ -18,7 +19,9 @@ public class Main extends ManagedGame<ManagedScreen, ScreenTransition> {
     @Override
     public void create() {
         super.create();
+        Bullet.init();
         this.screenManager.pushScreen(new MainMenu(this.screenManager), null);
+        this.screenManager.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
     }
 
 

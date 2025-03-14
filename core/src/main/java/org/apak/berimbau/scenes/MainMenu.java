@@ -5,8 +5,10 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.scenes.scene2d.EventListener;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import org.apak.berimbau.components.CustomButton;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -20,6 +22,7 @@ import de.eskalon.commons.screen.ScreenManager;
 import de.eskalon.commons.screen.transition.ScreenTransition;
 import de.eskalon.commons.screen.transition.impl.SlidingDirection;
 import de.eskalon.commons.screen.transition.impl.SlidingInTransition;
+import de.eskalon.commons.screen.transition.impl.PushTransition;
 
 import org.apak.berimbau.Main;
 
@@ -30,23 +33,23 @@ public class MainMenu extends ManagedScreen {
     public MainMenu(ScreenManager<ManagedScreen, ScreenTransition> screenManager) {
         this.screenManager = screenManager;
         stage = new Stage(new ScreenViewport());
-        System.out.println(Gdx.files.internal("blade-encore/assets/lgdxs/skin/lgdxs-ui.json").file().getAbsolutePath());
-        skin = new Skin(Gdx.files.internal("blade-encore/assets/lgdxs/skin/lgdxs-ui.json"));
+        skin = new Skin(Gdx.files.internal("blade-encore/assets/blade-encore-ui/blade-encore.json"));
         Gdx.input.setInputProcessor(stage);
 
         // Example usage:
         Table table = new Table();
         table.setFillParent(true);
         table.center();
-        TextButton play = new TextButton("Play", skin);
+
+        CustomButton play = new CustomButton("Play");
         play.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 System.out.println("Switching to Gameplay screen...");
-                screenManager.pushScreen(new TestScene(screenManager), new SlidingInTransition(new SpriteBatch(), SlidingDirection.RIGHT, 0.1f));
+                screenManager.pushScreen(new TestScene(screenManager), new PushTransition(new SpriteBatch(), SlidingDirection.RIGHT, 0.2f));
         }});
-        TextButton settings = new TextButton("Settings", skin);
-        TextButton character = new TextButton("Character", skin);
+        CustomButton settings = new CustomButton("Settings");
+        CustomButton character = new CustomButton("Character");
         character.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -55,7 +58,7 @@ public class MainMenu extends ManagedScreen {
                 Gdx.app.postRunnable(new Runnable() {
                     @Override
                     public void run() {
-                        screenManager.pushScreen(new CharacterSelectScreen(screenManager), new SlidingInTransition(new SpriteBatch(), SlidingDirection.RIGHT, 0.1f));
+                        screenManager.pushScreen(new CharacterSelectScreen(screenManager), new PushTransition(new SpriteBatch(), SlidingDirection.RIGHT, 0.2f));
                     }
                 });
             }

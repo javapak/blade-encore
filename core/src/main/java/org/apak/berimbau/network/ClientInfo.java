@@ -7,17 +7,14 @@ import org.apak.berimbau.components.StateMachine;
 import java.net.InetAddress;
 
 public class ClientInfo {
-    public InetAddress address;
-    public int port;
-    public Vector3 position;
-    public StateMachine state;
-    public AttackStance attackStance;
+    public final InetAddress address;
+    public final int port;
+    public final Vector3 position = new Vector3();
+    public final Vector3 moveDirection = new Vector3();
+    public boolean isWalking, isShuffling, isAttacking, isBlocking, isAirborne, isStanceSwitching;
 
-    public ClientInfo(InetAddress address, int port, Vector3 position, StateMachine newStates, AttackStance attackStance) {
+    public ClientInfo(InetAddress address, int port) {
         this.address = address;
         this.port = port;
-        this.position = position;
-        this.state = newStates;
-        this.attackStance = attackStance;
     }
 }

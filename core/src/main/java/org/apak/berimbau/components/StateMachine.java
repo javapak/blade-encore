@@ -4,6 +4,8 @@ import java.io.IOException;
 
 import java.io.Serializable;
 
+import org.apak.berimbau.controllers.CharacterState;
+
 public class StateMachine<T extends Enum<T>> implements Serializable {
     private AttackStance attackStance = AttackStance.BALANCED; // Default stance
     private boolean isAirborne = false;
@@ -16,7 +18,7 @@ public class StateMachine<T extends Enum<T>> implements Serializable {
 
 
 
-    public void setState(StateMachine newStates) {
+    public void setState(StateMachine<CharacterState> newStates) {
         if (!this.equals(newStates)) {
             System.out.println("State changed to: " + newStates);
             this.attackStance = newStates.getAttackStance();
@@ -45,8 +47,8 @@ public class StateMachine<T extends Enum<T>> implements Serializable {
         }
     }
 
-    public StateMachine getCurrentState() {
-        return this;
+    public StateMachine<CharacterState> getCurrentState() {
+        return (StateMachine<CharacterState>) this;
     }
 
     public AttackStance getAttackStance() {

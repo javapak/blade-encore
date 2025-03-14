@@ -6,6 +6,9 @@ import java.util.Map;
 
 import org.apak.berimbau.components.AttackStance;
 import org.apak.berimbau.components.StateMachine;
+import org.apak.berimbau.controllers.CharacterState;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
 
 import com.badlogic.gdx.math.Vector3;
 import java.io.Serializable;
@@ -17,6 +20,22 @@ public class NetworkPacket implements Serializable {
 
     private int playerID;
     private Map<String, Object> data;
+
+    private InetAddress senderAddress;
+    private int senderPort;
+
+    public void setSender(InetAddress address, int port) {
+        this.senderAddress = address;
+        this.senderPort = port;
+    }
+
+public InetAddress getSenderAddress() {
+    return senderAddress;
+}
+
+public int getSenderPort() {
+    return senderPort;
+}
 
     public NetworkPacket(int playerID) {
         this.playerID = playerID;
@@ -51,8 +70,8 @@ public class NetworkPacket implements Serializable {
         return data;
     }
 
-	public StateMachine getStateMachine(String key) {
-	return (StateMachine) data.getOrDefault(key, "");
-	}
-}
+	public StateMachine<CharacterState> getStateMachine(String key) {
+		return (StateMachine<CharacterState>) data.getOrDefault(key, new StateMachine<CharacterState>());
+		
+	}}
 

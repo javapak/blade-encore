@@ -1,41 +1,49 @@
 package org.apak.berimbau.components;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
 
 public class MovementComponent {
-    private Vector3 position = new Vector3(0, 0, 0);
-    private float velocityY = 0;
-    private boolean isGrounded = true;
+    private final btRigidBody rigidBody;
+    private final float moveSpeed = 10f;
+    private final Vector3 position = new Vector3();
+    private final Vector3 velocity = new Vector3();
 
-    public void update(InputHandler input, float deltaTime) {
-        Vector3 direction = input.getMoveDirection();
-        position.add(direction.scl(6f * deltaTime));
-
-        applyGravity(deltaTime);
+    public MovementComponent(btRigidBody rigidBody) {
+        this.rigidBody = rigidBody;
+        Matrix4 transform = new Matrix4();
+        rigidBody.getWorldTransform(transform);
+        transform.getTranslation(position);
     }
 
-    private void applyGravity(float deltaTime) {
-        if (!isGrounded) {
-            velocityY -= 9.8f * deltaTime;
-            position.y += velocityY * deltaTime;
-        }
-        
-        if (position.y <= 0) {
-            position.y = 0;
-            velocityY = 0;
-            isGrounded = true;
+    public void move(Vector3 moveDirection, float deltaTime) {
+        if (!moveDirection.isZero()) {
+            moveDirection.nor().scl(moveSpeed);
+            rigidBody.applyCentralForce(moveDirection);
+            rigidBody.activate(); // ✅ Prevents Bullet from deactivating the character
+            velocity.set(moveDirection); // ✅ Store movement velocity
+            System.out.println("🛠 Applying force: " + moveDirection);
+        } else {
+            velocity.setZero(); // ✅ Stop movement if no input
         }
     }
 
-    public boolean isAirborne() {
-        return !isGrounded;
+    public void update() {
+        Matrix4 transform = new Matrix4();
+        rigidBody.getWorldTransform(transform);
+        transform.getTranslation(position); 
+   }
+
+    public Vector3 getVelocity() {
+        return velocity;
+    }
+
+    public void setPosition(Vector3 position) {
+        this.position.set(position);
     }
 
     public Vector3 getPosition() {
         return position;
-    }
-    // For networking purposes
-    public void setPosition(Vector3 newPosition) {
-        position = newPosition;
+    
     }
 }
-

@@ -12,8 +12,20 @@ public class NetworkManager {
     private DatagramSocket socket;
     private InetAddress serverAddress;
     private int serverPort;
+    private InetAddress clientAddress;
 
     private final Queue<NetworkPacket> receivedPackets = new ConcurrentLinkedQueue<>();
+
+    protected NetworkManager(String serverIP, int port, String clientAddress) {
+        try {
+            socket = new DatagramSocket();
+            serverAddress = InetAddress.getByName(serverIP);
+            serverPort = port;
+            this.clientAddress = InetAddress.getByName(clientAddress);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     protected NetworkManager(String serverIP, int port) {
         try {
@@ -25,9 +37,9 @@ public class NetworkManager {
         }
     }
 
-    public static NetworkManager getInstance(String serverIP, int port) {
+    public static NetworkManager getInstance(String serverIP, int port, String clientAddress) {
         if (instance == null) {
-            instance = new NetworkManager(serverIP, port);
+            instance = new NetworkManager(serverIP, port, clientAddress);
         }
         return instance;
     }
@@ -41,6 +53,7 @@ public class NetworkManager {
      */
     public void sendData(NetworkPacket packet) {
         try {
+            packet.setSender(clientAddress, serverPort);
             byte[] data = serialize(packet);
             DatagramPacket udpPacket = new DatagramPacket(data, data.length, serverAddress, serverPort);
             socket.send(udpPacket);
@@ -95,7 +108,7 @@ public class NetworkManager {
     /**
      * Deserialize bytes into a NetworkPacket.
      */
-    private NetworkPacket deserialize(byte[] data) {
+    public static NetworkPacket deserialize(byte[] data) {
         try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
              ObjectInputStream ois = new ObjectInputStream(bis)) {
             return (NetworkPacket) ois.readObject();
