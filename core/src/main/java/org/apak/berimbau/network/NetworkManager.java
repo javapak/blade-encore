@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class NetworkManager {
     private static NetworkManager instance;
-    private DatagramSocket socket;
+    protected DatagramSocket socket;
     private InetAddress serverAddress;
     private int serverPort;
 
@@ -82,7 +82,7 @@ public class NetworkManager {
     /**
      * Serialize a NetworkPacket into bytes.
      */
-    private byte[] serialize(NetworkPacket packet) {
+    protected byte[] serialize(NetworkPacket packet) {
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
              ObjectOutputStream oos = new ObjectOutputStream(bos)) {
             oos.writeObject(packet);

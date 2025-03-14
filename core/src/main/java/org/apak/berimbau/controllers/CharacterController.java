@@ -57,6 +57,7 @@ public class CharacterController extends btMotionState {
         this.camera = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         updateCamera();
     }
+
     private void setupModel() {
         ModelBuilder modelBuilder = new ModelBuilder();
         Model cubeModel = modelBuilder.createBox(
@@ -80,33 +81,49 @@ public class CharacterController extends btMotionState {
         this.combat = new CombatComponent();
         this.state = new StateMachine<CharacterState>();
         this.network = new NetworkingComponent(playerID, serverIP, serverPort);
-        this.input = new NetworkInputHandler(playerID, NetworkManager.getInstance());
+        
+        // Pass movement component to the NetworkInputHandler
+        this.input = new NetworkInputHandler(
+            playerID,
+            ClientNetworkManager.getClientNetworkManagerInstance(serverIP, serverPort),
+            this.movement
+        );
+        
+        this.network.getNetworkManager().startReceiveData();
         camera = new PerspectiveCamera(120, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         
 
         this.camera.position.set(0, 1, 0);
         this.updateCamera();
     }
-
     public int getPlayerID() {
         return playerID;
     }
 
+    public void setupPhysics() {
+        // Create a new Vector3 to store the linear factor
+        Vector3 linearFactor = new Vector3(1f, 1f, 1f);
+    
+        // Set the linear factor to ensure movement is allowed on all axes
+        rigidBody.setLinearFactor(linearFactor);
+    
+        System.out.println("Set linear factor to: " + linearFactor);
+        rigidBody.setRestitution(0.1f);
+        rigidBody.setFriction(0.0f);  // Lower friction (was 0.9f)
 
-    private void setupPhysics() {
-        rigidBody.setRestitution(0.0f);
-        rigidBody.setFriction(0.9f);
-        rigidBody.setDamping(0.05f, 0.05f);
+        
+        // Add stronger damping to prevent runaway acceleration
+        rigidBody.setDamping(0.0f, 0.0f); 
+        
         rigidBody.setGravity(new Vector3(0, -9.81f, 0));
-        rigidBody.setActivationState(Collision.ACTIVE_TAG); 
+        rigidBody.setActivationState(Collision.ACTIVE_TAG);
+
         rigidBody.setCollisionFlags(rigidBody.getCollisionFlags() & ~btCollisionObject.CollisionFlags.CF_KINEMATIC_OBJECT);
     
         transform.setTranslation(0, 2, 0);
         rigidBody.setWorldTransform(transform);
-    
-        System.out.println("Physics Initialized! RigidBody set up.");
-    }
-    @Override
+
+    }    @Override
     public void getWorldTransform(Matrix4 worldTrans) {
         worldTrans.set(transform);
     }
@@ -114,20 +131,6 @@ public class CharacterController extends btMotionState {
     public ModelInstance getModelInstance() {
         return modelInstance;
     }
-
-    @Override
-    public void setWorldTransform(Matrix4 worldTrans) {
-        transform.set(worldTrans);
-    
-        //  Update MovementComponent position
-        movement.setPosition(transform.getTranslation(movement.getPosition()));
-    
-        //  Sync ModelInstance with physics
-        modelInstance.transform.set(transform);
-    
-        //  Debugging: Confirm correct position updates
-    }
-
     public StateMachine<CharacterState> getState() {
         return state.getCurrentState();
     }
@@ -147,30 +150,56 @@ public class CharacterController extends btMotionState {
     public void update(float deltaTime) {
         rigidBody.activate(); // Prevent sleeping
     
-        Vector3 moveDirection = new Vector3();
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) moveDirection.z -= 1;
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) moveDirection.z += 1;
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) moveDirection.x -= 1;
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) moveDirection.x += 1;
-    
-        if (!moveDirection.isZero()) {
-            movement.move(moveDirection, deltaTime);
-            System.out.println("Moving: " + moveDirection);
+        // First check for network updates
+        if (network != null) {
+            // Process any waiting network packets
+            NetworkPacket packet = network.getNetworkManager().getNextPacket();
+            if (packet != null) {
+                network.applyNetworkData(this, packet);
+            }
         }
     
-        movement.update(); // Sync position and velocity with physics
+        // If we recently got a network update, skip local movement processing
+        if (network != null && network.wasRecentlyUpdatedFromServer()) {
+            System.out.println("Skipping local movement - using network position");
+        } else {
+            // Local movement processing
+            Vector3 moveDirection = new Vector3();
+            if (Gdx.input.isKeyPressed(Input.Keys.W)) moveDirection.z -= 1;
+            if (Gdx.input.isKeyPressed(Input.Keys.S)) moveDirection.z += 1;
+            if (Gdx.input.isKeyPressed(Input.Keys.A)) moveDirection.x -= 1;
+            if (Gdx.input.isKeyPressed(Input.Keys.D)) moveDirection.x += 1;
     
+            if (!moveDirection.isZero()) {
+                movement.move(moveDirection, deltaTime);
+            }
+        }
+    
+        // Always update movement component
+        movement.update();
+    
+        // Sync model with physics
         rigidBody.getWorldTransform(transform);
-        modelInstance.transform.set(transform); // Sync ModelInstance
+        modelInstance.transform.set(transform);
     
+        // Update camera
         updateCamera();
     
+        // Send our current state to the server
         if (network != null) {
             network.sync(this);
         }
-    
     }
-    
+    @Override
+    public void setWorldTransform(Matrix4 worldTrans) {
+        transform.set(worldTrans);
+        
+        // Explicitly sync position with the MovementComponent
+        movement.syncPositionFromPhysics();
+        
+        // Sync ModelInstance with physics
+        modelInstance.transform.set(transform);
+    }
     
     private void cycleAttackStance() {
         switch (state.getAttackStance()) {

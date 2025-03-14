@@ -4,6 +4,8 @@ import org.apak.berimbau.network.ClientInfo;
 import org.apak.berimbau.network.NetworkManager;
 import org.apak.berimbau.network.NetworkPacket;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+
 import org.apak.berimbau.components.AttackStance;
 import org.apak.berimbau.components.StateMachine;
 
@@ -29,7 +31,7 @@ public class ServerNetworkManager extends NetworkManager {
             if (this.socket == null) {
                 this.socket = new DatagramSocket(null);
                 this.socket.setReuseAddress(true); // Allows reusing the port immediately
-                this.socket.bind(new InetSocketAddress(serverPort)); //Binds safely
+                this.socket.bind(new InetSocketAddress("0.0.0.0", serverPort)); //Binds safely
             }
             startListening();
         } catch (Exception e) {
@@ -39,18 +41,23 @@ public class ServerNetworkManager extends NetworkManager {
 
         
 
-    private void startListening() {
+    public void startListening() {
         new Thread(() -> {
             while (true) {
                 try {
+
                     byte[] buffer = new byte[1024];
                     DatagramPacket udpPacket = new DatagramPacket(buffer, buffer.length);
                     socket.receive(udpPacket);
     
                     NetworkPacket packet = NetworkManager.deserialize(udpPacket.getData());
-                    packet.setSender(udpPacket.getAddress(), udpPacket.getPort()); // ✅ Store sender info
-    
+                    System.out.println("Received a packet " + packet.toString());
+
+                    if (packet != null){
+                    packet.setSender(udpPacket.getAddress(), getPort() + 1); // Store sender info
+                    
                     processPacket(packet);
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -58,7 +65,7 @@ public class ServerNetworkManager extends NetworkManager {
         }).start();
     }
 
-    private byte[] serialize(NetworkPacket packet) {
+    public byte[] serialize(NetworkPacket packet) {
     try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
          ObjectOutputStream oos = new ObjectOutputStream(bos)) {
         oos.writeObject(packet);
@@ -72,12 +79,13 @@ public class ServerNetworkManager extends NetworkManager {
 public void processPacket(NetworkPacket packet) {
     InetAddress clientAddress = packet.getSenderAddress();
     int clientPort = packet.getSenderPort();
-    String clientKey = clientAddress.getHostAddress() + ":" + clientPort; // ✅ Unique identifier
+    String clientKey = clientAddress.getHostAddress();
+    System.out.println("Received packet from " + clientKey + " at " + clientAddress + ":" + clientPort);
 
     //  Register new clients if not already tracked
     if (!players.containsKey(clientKey)) {
         players.put(clientKey, new ClientInfo(clientAddress, clientPort));
-        System.out.println("✅ New client connected: " + clientKey);
+        System.out.println(" New client connected: " + clientKey);
     }
 
     // Update the client's state
@@ -94,7 +102,7 @@ public void processPacket(NetworkPacket packet) {
     client.isStanceSwitching = packet.getBoolean("isStanceSwitching");
 
     // Log the update
-    System.out.println("📡 Updated player " + clientKey + " | Position: " + client.position);
+    System.out.println("Server Network Manager: Updated player " + clientKey + " | Position: " + client.position);
 
     // Broadcast this update to all clients
     broadcastToAllPlayers(packet, clientKey);
@@ -185,7 +193,7 @@ private void broadcastToAllPlayers(NetworkPacket packet, String senderKey) {
 
             DatagramPacket udpPacket = new DatagramPacket(data, data.length, receiver.address, receiver.port);
             socket.send(udpPacket);
-            System.out.println("📡 Sent broadcast update to " + receiver.address + ":" + receiver.port);
+            System.out.println("Sent broadcast update to " + receiver.address + ":" + receiver.port);
         }
     } catch (Exception e) {
         e.printStackTrace();

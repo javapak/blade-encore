@@ -2,6 +2,7 @@ package org.apak.berimbau.components;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 import org.apak.berimbau.network.NetworkManager;
 import org.apak.berimbau.network.NetworkPacket;
@@ -16,11 +17,14 @@ public class NetworkInputHandler implements InputHandler {
     private boolean isStanceSwitching;
 
     private final int playerID;
-    private final NetworkManager networkManager;
+    private final ClientNetworkManager networkManager;
+    private MovementComponent movement; // Add reference to movement component
 
-    public NetworkInputHandler(int playerID, NetworkManager networkManager) {
+    // Updated constructor to accept movement component
+    public NetworkInputHandler(int playerID, ClientNetworkManager networkManager, MovementComponent movement) {
         this.playerID = playerID;
         this.networkManager = networkManager;
+        this.movement = movement;
     }
 
     /**
@@ -38,14 +42,15 @@ public class NetworkInputHandler implements InputHandler {
         isAirborne = Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
         isStanceSwitching = Gdx.input.isKeyJustPressed(Input.Keys.Q);
     
-        // ✅ NEW: Update position before sending
+        // Update position before sending
         position.add(moveDirection.cpy().scl(Gdx.graphics.getDeltaTime() * 10)); // Simulate movement locally
     
-        // ✅ NEW: Log movement updates
-        System.out.println("📡 Sending move update | Position: " + position + " | MoveDir: " + moveDirection);
+        // Log movement updates
+        System.out.println("Sending move update | Position: " + position + " | MoveDir: " + moveDirection);
     
         // Package the input state and send to server
         NetworkPacket packet = new NetworkPacket(playerID);
+        packet.setSender(networkManager.socket.getInetAddress(), networkManager.socket.getPort());
         packet.put("position", position);
         packet.put("moveDirection", moveDirection);
         packet.put("isWalking", isWalking);
@@ -56,24 +61,28 @@ public class NetworkInputHandler implements InputHandler {
         packet.put("isAirborne", isAirborne);
         packet.put("isStanceSwitching", isStanceSwitching);
     
-        networkManager.sendData(packet); // n
+        networkManager.sendData(packet);
     }
-
-    /**
-     * Called when a new network update is received from the server.
-     */
-    public void updateFromNetwork(NetworkPacket packet) {
-        if (packet.getPlayerID() == this.playerID) {
-            this.moveDirection.set(packet.getVector3("moveDirection"));
-            this.isWalking = packet.getBoolean("isWalking");
-            this.isShuffling = packet.getBoolean("isShuffling");
-            this.isAttacking = packet.getBoolean("isAttacking");
-            this.isBlocking = packet.getBoolean("isBlocking");
-            this.isAirborne = packet.getBoolean("isAirborne");
-            this.isStanceSwitching = packet.getBoolean("isStanceSwitching");
+        /**
+       * Called when a new network update is received from the server.
+       */
+        public void updateFromNetwork(NetworkPacket packet) {
+            if (packet.getPlayerID() == this.playerID) {
+                Vector3 oldMoveDir = new Vector3(this.moveDirection);
+            
+                // Update input state
+                this.moveDirection.set(packet.getVector3("moveDirection"));
+                this.isWalking = packet.getBoolean("isWalking");
+                this.isShuffling = packet.getBoolean("isShuffling");
+                this.isAttacking = packet.getBoolean("isAttacking");
+                this.isBlocking = packet.getBoolean("isBlocking");
+                this.isAirborne = packet.getBoolean("isAirborne");
+                this.isStanceSwitching = packet.getBoolean("isStanceSwitching");
+            
+                System.out.println("Network input update: Direction changed from " + 
+                    oldMoveDir + " to " + this.moveDirection);
+            }
         }
-    }
-
     private boolean detectShuffle() {
         return Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_LEFT);
     }

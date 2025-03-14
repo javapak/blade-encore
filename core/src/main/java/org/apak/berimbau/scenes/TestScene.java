@@ -1,6 +1,7 @@
 package org.apak.berimbau.scenes;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes;
@@ -19,6 +20,7 @@ import com.badlogic.gdx.graphics.g3d.utils.DefaultShaderProvider;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.collision.btBroadphaseInterface;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionConfiguration;
@@ -40,6 +42,7 @@ import de.eskalon.commons.screen.ScreenManager;
 import de.eskalon.commons.screen.transition.ScreenTransition;
 
 import org.apak.berimbau.controllers.CharacterController;
+import org.apak.berimbau.network.GeneralUtils;
 
 public class TestScene extends ManagedScreen {
     private btDiscreteDynamicsWorld dynamicsWorld;
@@ -57,7 +60,8 @@ public class TestScene extends ManagedScreen {
     public TestScene(ScreenManager<ManagedScreen, ScreenTransition> screenManager) {
         setupPhysics();
         setupGround();
-        player = new CharacterController(3, "10.0.0.61", 7777);
+        player = new CharacterController(3, GeneralUtils.getBestLocalIP().getHostAddress(), 7777);
+        player.setupPhysics();
         dynamicsWorld.addRigidBody(player.getRigidBody());
 
         modelBatch = new ModelBatch();
@@ -76,17 +80,17 @@ private void setupPhysics() {
     dynamicsWorld.setGravity(new Vector3(0, -9.81f, 0));
 
 
-    System.out.println("✅ Bullet Physics World Initialized!");
+    System.out.println(" Bullet Physics World Initialized!");
 }
 
 private void setupGround() {
-    // ✅ Create a visual model for the ground
+    //  Create a visual model for the ground
     System.out.println(Gdx.files.internal("blade-encore/assets/textures/512blue.png").exists());
     Texture groundTexture = new Texture(Gdx.files.internal("blade-encore/assets/textures/512blue.png"));
 
     Material groundMaterial = new Material(TextureAttribute.createDiffuse(groundTexture));
 
-    // ✅ Use ModelBuilder to manually scale UVs
+    //  Use ModelBuilder to manually scale UVs
     ModelBuilder modelBuilder = new ModelBuilder();
     modelBuilder.begin();
     MeshPartBuilder meshBuilder = modelBuilder.part(
@@ -95,8 +99,8 @@ private void setupGround() {
         groundMaterial
     );
 
-    float size = 50f;  // ✅ Ground size
-    float uvScale = 10f;  // ✅ Repeat texture 10 times
+    float size = 50f;  // Ground size
+    float uvScale = 10f;  // Repeat texture 10 times
     meshBuilder.rect(
         -size, 0f,  size,   // Top-left
          size, 0f,  size,   // Top-right
@@ -110,25 +114,43 @@ private void setupGround() {
     groundModel = new ModelInstance(groundVisual);
     groundModel.transform.setToTranslation(0, -0.05f, 0); 
 
-    // ✅ Create a static physics body for the ground
+    // Create a static physics body for the ground
     btCollisionShape groundShape = new btStaticPlaneShape(new Vector3(0, 1, 0), 0);
     btRigidBodyConstructionInfo groundInfo = new btRigidBodyConstructionInfo(0, null, groundShape);
     groundBody = new btRigidBody(groundInfo);
     groundBody.setCollisionFlags(btCollisionObject.CollisionFlags.CF_STATIC_OBJECT);
     dynamicsWorld.addRigidBody(groundBody);
 
-    System.out.println("✅ Ground model created with repeated texture!");
+    System.out.println(" Ground model created with repeated texture!");
 }
 @Override
 public void render(float delta) {
     Gdx.gl.glClearColor(0, 0, 0, 1);
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+    
+    // Add teleport test on key press
+
+
+    if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+        Matrix4 resetTransform = new Matrix4();
+        resetTransform.setToTranslation(0, 2, 0);
+        player.getRigidBody().setWorldTransform(resetTransform);
+        player.getMovement().update();
+        System.out.println("Reset player position to origin");
+        
+        // Also reset velocity
+        player.getRigidBody().setLinearVelocity(new Vector3(0, 0, 0));
+    }
+
+    // Physics and update
     dynamicsWorld.stepSimulation(delta, 5, 1f / 60f);
     player.update(delta);
     player.getCamera().update();
-
-    dynamicsWorld.stepSimulation(delta, 5);
-
+    
+    // Debug output current position every few frames
+    if (Gdx.graphics.getFrameId() % 60 == 0) {
+    }
+    
     modelBatch.begin(player.getCamera());
     if (groundModel != null) {
         modelBatch.render(groundModel, environment);
@@ -144,7 +166,8 @@ public void render(float delta) {
     }
 
     modelBatch.end();
-}    @Override
+}
+@Override
     public void show() {
         Gdx.input.setInputProcessor(null); // Reset input for the scene
     }
