@@ -1,0 +1,66 @@
+
+blade-encore.png
+size: 1024, 1024
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+white-pixel
+  rotate: false
+  xy: 1, 1
+  size: 1, 1
+  orig: 1, 1
+  offset: 0, 0
+  index: -1
+blade-encore_0
+  rotate: false
+  xy: 1, 520
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+blade-encore_1
+  rotate: false
+  xy: 1, 262
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+blade-encore_2
+  rotate: false
+  xy: 1, 4
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+blade-encore_3
+  rotate: false
+  xy: 378, 724
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+blade-encore_4
+  rotate: false
+  xy: 636, 724
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+over
+  rotate: false
+  xy: 1, 880
+  size: 375, 100
+  split: 40, 32, 8, 4
+  pad: 0, 0, 0, 0
+  orig: 375, 100
+  offset: 0, 0
+  index: -1
+unhovered
+  rotate: false
+  xy: 1, 778
+  size: 375, 100
+  split: 38, 32, 13, 3
+  pad: 0, 0, 0, 0
+  orig: 375, 100
+  offset: 0, 0
+  index: -1
