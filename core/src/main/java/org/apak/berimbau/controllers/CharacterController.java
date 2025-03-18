@@ -16,6 +16,9 @@ import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
 import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
 import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody.btRigidBodyConstructionInfo;
 import com.badlogic.gdx.physics.bullet.linearmath.btMotionState;
+
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apak.berimbau.components.*;
 import org.apak.berimbau.network.NetworkManager;
 import org.apak.berimbau.network.NetworkPacket;
@@ -152,6 +155,7 @@ public class CharacterController extends btMotionState {
     
         // First check for network updates
         if (network != null) {
+            this.network.getNetworkManager().update();
             // Process any waiting network packets
             NetworkPacket packet = network.getNetworkManager().getNextPacket();
             if (packet != null) {
@@ -171,7 +175,7 @@ public class CharacterController extends btMotionState {
             if (Gdx.input.isKeyPressed(Input.Keys.D)) moveDirection.x += 1;
     
             if (!moveDirection.isZero()) {
-                movement.move(moveDirection, deltaTime);
+                movement.move(moveDirection);
             }
         }
     
@@ -181,7 +185,7 @@ public class CharacterController extends btMotionState {
         // Sync model with physics
         rigidBody.getWorldTransform(transform);
         modelInstance.transform.set(transform);
-    
+        // update remote players...    
         // Update camera
         updateCamera();
     
@@ -199,6 +203,15 @@ public class CharacterController extends btMotionState {
         
         // Sync ModelInstance with physics
         modelInstance.transform.set(transform);
+    }
+
+    public ConcurrentHashMap<String, RemotePlayer> getRemotePlayers() {
+        
+        if (network != null) {
+        return network.getNetworkManager().getPlayers();
+        }
+
+        return null;
     }
     
     private void cycleAttackStance() {
