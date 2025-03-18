@@ -60,7 +60,7 @@ public class TestScene extends ManagedScreen {
     public TestScene(ScreenManager<ManagedScreen, ScreenTransition> screenManager) {
         setupPhysics();
         setupGround();
-        player = new CharacterController(3, GeneralUtils.getBestLocalIP().getHostAddress(), 7777);
+        player = new CharacterController(4, "10.0.0.61", 7777);
         player.setupPhysics();
         dynamicsWorld.addRigidBody(player.getRigidBody());
 

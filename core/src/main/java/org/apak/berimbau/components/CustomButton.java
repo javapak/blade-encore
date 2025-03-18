@@ -1,5 +1,6 @@
 package org.apak.berimbau.components;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
@@ -9,6 +10,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.Audio;
 
     public class CustomButton extends Actor {
         private ShapeRenderer shapeRenderer;
@@ -23,9 +25,14 @@ import com.badlogic.gdx.scenes.scene2d.InputListener;
         private Color activeDropShadowColorRef = Color.DARK_GRAY;
         private Color activeAccentColorRef = Color.WHITE;
         private float textScale = 0.4f;
+        private Sound hoverSound = Gdx.audio.newSound(Gdx.files.internal("blade-encore/assets/sound/UI/buttonrollover.wav"));
+        private Sound clickDownSound = Gdx.audio.newSound(Gdx.files.internal("blade-encore/assets/sound/UI/buttonclick.wav"));
+        private Sound clickReleaseSound = Gdx.audio.newSound(Gdx.files.internal("blade-encore/assets/sound/UI/buttonclickrelease.wav"));
+    
+
     
         private float baseWidth, baseHeight; // Store original size
-    
+
         public CustomButton(String text, float width, float height) {
             this.text = text;
             this.baseWidth = width;  // Store original width
@@ -54,6 +61,7 @@ import com.badlogic.gdx.scenes.scene2d.InputListener;
                     target.activeTextColorRef = Color.BLACK;
                     target.activeDropShadowColorRef = Color.BLACK;
                     target.activeAccentColorRef = Color.BLACK;
+                    hoverSound.play(50); 
                 }
     
                 @Override
@@ -70,6 +78,7 @@ import com.badlogic.gdx.scenes.scene2d.InputListener;
                     CustomButton target = (CustomButton) (event.getTarget());
                     target.layout.width -= shadowOffset;
                     target.setX(target.getX() + shadowOffset);
+                    clickDownSound.play(50);
                     return true;
                 }
     
@@ -78,6 +87,7 @@ import com.badlogic.gdx.scenes.scene2d.InputListener;
                     CustomButton target = (CustomButton) (event.getTarget());
                     target.layout.width += shadowOffset;
                     target.setX(target.getX() - shadowOffset);
+                    clickReleaseSound.play(50);
                 }
             });
         }
