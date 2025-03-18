@@ -71,7 +71,7 @@ public class ClientNetworkManager extends NetworkManager {
                     socket.receive(udpPacket);
                     }
                     NetworkPacket packet = NetworkManager.deserialize(udpPacket.getData());
-                    System.out.println("Received a packet " + packet.toString());
+                    // System.out.println("Received a packet " + packet.toString());
                     packet.setSender(udpPacket.getAddress(), getClientSocketPort()); // Store sender info
                     processPacket(packet);
                 } catch (Exception e) {

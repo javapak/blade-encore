@@ -109,7 +109,7 @@ public class CharacterController extends btMotionState {
     
         System.out.println("Set linear factor to: " + linearFactor);
         rigidBody.setRestitution(0.1f);
-        rigidBody.setFriction(0.0f);  // Lower friction (was 0.9f)
+        rigidBody.setFriction(2f);  // Lower friction (was 0.9f)
 
         
         // Add stronger damping to prevent runaway acceleration

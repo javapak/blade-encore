@@ -35,7 +35,7 @@ public class MovementComponent {
     public void move(Vector3 moveDirection, float deltaTime) {
         if (!moveDirection.isZero()) {
             // Use a reasonable force - scale by deltaTime to make it frame-rate independent
-            moveDirection.nor().scl(moveSpeed * deltaTime * 3);
+            moveDirection.nor().scl(moveSpeed * 100);
             System.out.println("Applying force: " + moveDirection);
             rigidBody.applyCentralForce(moveDirection);
             rigidBody.activate();

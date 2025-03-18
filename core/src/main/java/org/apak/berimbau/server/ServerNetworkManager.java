@@ -51,7 +51,7 @@ public class ServerNetworkManager extends NetworkManager {
                     socket.receive(udpPacket);
     
                     NetworkPacket packet = NetworkManager.deserialize(udpPacket.getData());
-                    System.out.println("Received a packet " + packet.toString());
+                    // System.out.println("Received a packet " + packet.toString());
 
                     if (packet != null){
                     packet.setSender(udpPacket.getAddress(), getPort() + 1); // Store sender info
