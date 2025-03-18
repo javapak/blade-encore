@@ -5,6 +5,7 @@ import org.apak.berimbau.network.NetworkPacket;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 
+
 import org.apak.berimbau.controllers.CharacterController;
 
 public class NetworkingComponent {
@@ -16,7 +17,7 @@ public class NetworkingComponent {
     private long lastServerUpdate = 0;
     private boolean serverConnectionVerified = false;
     private long lastConnectionCheck = 0;
-    private static final long CONNECTION_CHECK_INTERVAL = 5000; // Check every 5 seconds
+    private static final long CONNECTION_CHECK_INTERVAL = 500000;
 
     public NetworkingComponent(int id, String serverIP, int serverPort) {
         this.playerID = id;
@@ -54,6 +55,7 @@ public class NetworkingComponent {
     }
 
     public void sync(CharacterController character) {
+        new Thread(() -> {
         // Periodically check connection
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastConnectionCheck > CONNECTION_CHECK_INTERVAL) {
@@ -88,6 +90,7 @@ public class NetworkingComponent {
                 applyNetworkData(character, serverPacket);
             }
         }
+        }).start();
     }
     
     public void applyNetworkData(CharacterController character, NetworkPacket packet) {

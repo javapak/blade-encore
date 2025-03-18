@@ -41,6 +41,11 @@ import de.eskalon.commons.screen.ManagedScreen;
 import de.eskalon.commons.screen.ScreenManager;
 import de.eskalon.commons.screen.transition.ScreenTransition;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.apak.berimbau.components.RemotePlayer;
 import org.apak.berimbau.controllers.CharacterController;
 import org.apak.berimbau.network.GeneralUtils;
 
@@ -56,11 +61,17 @@ public class TestScene extends ManagedScreen {
     private btBroadphaseInterface broadphase;
     private btConstraintSolver solver;
     private btCollisionShape groundShape;
+    private Set<String> addedPlayerKeys = new HashSet<>();
+
 
     public TestScene(ScreenManager<ManagedScreen, ScreenTransition> screenManager) {
         setupPhysics();
         setupGround();
         player = new CharacterController(3, GeneralUtils.getBestLocalIP().getHostAddress(), 7777);
+        player.getRemotePlayers().forEachValue(1000, remotePlayer -> 
+        dynamicsWorld.addRigidBody(remotePlayer.getRigidBody()));        
+     
+        
         player.setupPhysics();
         dynamicsWorld.addRigidBody(player.getRigidBody());
 
@@ -81,6 +92,21 @@ private void setupPhysics() {
 
 
     System.out.println(" Bullet Physics World Initialized!");
+}
+
+private void checkForNewRemotePlayers() {
+    // Get all remote players
+    ConcurrentHashMap<String, RemotePlayer> remotePlayers = player.getRemotePlayers();
+    
+    // Check for any players not yet added to physics world
+    remotePlayers.forEach((key, remotePlayer) -> {
+        if (!addedPlayerKeys.contains(key)) {
+            // Add to physics world
+            dynamicsWorld.addRigidBody(remotePlayer.getRigidBody());
+            addedPlayerKeys.add(key);
+            System.out.println("Added new remote player to physics world: " + key);
+        }
+    });
 }
 
 private void setupGround() {
@@ -129,7 +155,7 @@ public void render(float delta) {
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
     
     // Add teleport test on key press
-
+    checkForNewRemotePlayers();
 
     if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
         Matrix4 resetTransform = new Matrix4();
@@ -145,6 +171,7 @@ public void render(float delta) {
     // Physics and update
     dynamicsWorld.stepSimulation(delta, 5, 1f / 60f);
     player.update(delta);
+    player.getRemotePlayers().forEachValue(1000, remotePlayer -> remotePlayer.update(delta));
     player.getCamera().update();
     
     // Debug output current position every few frames
@@ -163,6 +190,16 @@ public void render(float delta) {
         modelBatch.render(player.getModelInstance(), environment);
     } else {
         System.err.println("ERROR: player.getModelInstance() is NULL!");
+    }
+
+    if (player.getRemotePlayers().size() > 0) {
+        for (RemotePlayer remotePlayer : player.getRemotePlayers().values()) {
+            if (remotePlayer.getModelInstance() != null) {
+                modelBatch.render(remotePlayer.getModelInstance(), environment);
+            } else {
+                System.err.println("ERROR: remotePlayer.getModelInstance() is NULL!");
+            }
+        }
     }
 
     modelBatch.end();
